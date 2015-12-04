@@ -1,0 +1,81 @@
+using System;
+using System.Collections.Generic;
+using System.Globalization;
+using System.IO;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+
+namespace desktop
+{
+    class Program
+    {
+
+        public Double ValidAmout(string req_amt)
+        {
+            var req_amount = 0.00;
+            try
+            {
+                req_amount = Convert.ToDouble(req_amt);
+            }
+            catch
+            {
+                Console.WriteLine("Please enter a numeric value as amount");
+            }
+
+            if ((req_amount % 100.00) != 0.00 || req_amount < 1000 || req_amount > 1500)
+            {
+                ErrorMsg();
+                req_amount = 0.00;
+            }
+
+            return req_amount;
+        }
+
+        public Double ZopasRate(string file,double request)
+        {
+            string[] allLines = File.ReadAllLines(file);
+
+            var minLender = (from line in allLines.Skip(1)
+
+                             let data = line.Split(',')
+
+                             where Convert.ToDouble(data[2]) >= request
+
+                             orderby data[1]
+
+                             select new { Lender = data[0], Rate = Convert.ToDouble(data[1]), Available = data[2] }).FirstOrDefault();
+                return ((minLender.Rate * 100) - 0.10);
+        }
+
+        public Double RateCalculator(double loan, double rate)
+        {
+            var zopaRate = Math.Round(rate / (12 * 100), 4);
+            Console.WriteLine("Rate: {0:0.0} %", rate);
+            double period = 36.00;
+            var period_rate = Math.Pow((1 + zopaRate), period);
+            var monthlyRepayment = loan * (zopaRate * period_rate / (period_rate - 1));
+            return monthlyRepayment;
+        }
+
+        public void ErrorMsg()
+        {
+            Console.WriteLine("It is not Possible to provide a qoute at this time");
+        }
+
+        static void Main(string[] args)
+        {
+            var amount = new desktop.Program();
+            var loanAmount = amount.ValidAmout(args[1]);
+            if (loanAmount != 0.00)
+            {
+                Console.WriteLine("Requested amount: {0}", loanAmount.ToString("C", CultureInfo.CurrentCulture));
+                var rate = amount.ZopasRate(args[0], loanAmount);
+                var monthly = amount.RateCalculator(loanAmount, rate);
+                Console.WriteLine("Monthly repayment: {0}", monthly.ToString("C", CultureInfo.CurrentCulture));
+                Console.WriteLine("Total repayment: {0}", (monthly * 36).ToString("C", CultureInfo.CurrentCulture));
+            }
+            Console.Read();
+        }
+    }
+}
